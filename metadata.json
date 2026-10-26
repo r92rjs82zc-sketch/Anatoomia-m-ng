@@ -1,0 +1,6 @@
+{
+  "name": "Lihaste Meister: Musculus Arena",
+  "description": "Põnev anatoomiamäng lihaste, ladinakeelsete nimetuste, funktsioonide ja füsioloogia õppimiseks.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

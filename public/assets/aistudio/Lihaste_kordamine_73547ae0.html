@@ -1,0 +1,396 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Lihaste kordamine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one study column; sarcomere-striped progress strip on top, a single card stage, mode tabs above */
+:root{
+  --bg:#EEF0F3; --surface:#FFFFFF; --sunk:#E3E6EB; --fg:#1A1E27; --muted:#5C6473; --line:#CDD2DA;
+  --accent:#A3203B; --accent-soft:#F6DDE2; --good:#1E7A5A; --good-soft:#D8EFE6; --warn:#B76E10; --warn-soft:#F7E8CF;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#13161C; --surface:#1C2029; --sunk:#252A35; --fg:#E7EAF0; --muted:#9AA2B1; --line:#343A47;
+  --accent:#E9637C; --accent-soft:#3A1F27; --good:#4CC496; --good-soft:#173329; --warn:#E5A44A; --warn-soft:#3A2C17; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#13161C; --surface:#1C2029; --sunk:#252A35; --fg:#E7EAF0; --muted:#9AA2B1; --line:#343A47;
+  --accent:#E9637C; --accent-soft:#3A1F27; --good:#4CC496; --good-soft:#173329; --warn:#E5A44A; --warn-soft:#3A2C17; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.5;padding-inline:16px;padding-block:20px 48px}
+.wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 16px}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(1.7rem,5vw,2.3rem);line-height:1.05;margin:0;text-wrap:balance}
+h1 em{font-style:normal;color:var(--accent)}
+.sub{color:var(--muted);font-size:.9rem;margin:4px 0 0}
+.stats{font-family:var(--mono);font-size:.8rem;color:var(--muted);display:flex;gap:14px;font-variant-numeric:tabular-nums}
+.stats b{color:var(--fg);font-weight:500}
+.dot{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:middle}
+
+/* sarcomere strip */
+.strip{display:flex;gap:2px;height:22px;padding:3px;background:var(--sunk);border-radius:4px}
+.strip span{flex:1;min-width:2px;border-radius:1px;background:var(--line);transition:background .2s}
+.strip span.learn{background:var(--warn)}
+.strip span.known{background:var(--good)}
+.strip span.cur{outline:2px solid var(--accent);outline-offset:1px}
+.legend{display:flex;gap:14px;font-size:.75rem;color:var(--muted);font-family:var(--mono);margin-top:-10px;flex-wrap:wrap}
+
+.tabs{display:flex;gap:4px;background:var(--sunk);padding:4px;border-radius:10px;overflow-x:auto}
+.tabs button{flex:1;white-space:nowrap;border:0;background:transparent;color:var(--muted);font:500 .92rem var(--body);padding:9px 12px;border-radius:7px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+
+.filters{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chip{border:1px solid var(--line);background:transparent;color:var(--fg);font:500 .82rem var(--body);padding:5px 11px;border-radius:999px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.chip.weak[aria-pressed="true"]{background:var(--warn);border-color:var(--warn);color:#fff}
+.chip small{font-family:var(--mono);opacity:.7;margin-left:3px}
+.sep{width:1px;height:20px;background:var(--line);margin:0 4px}
+
+.stage{min-height:340px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:28px 24px;display:flex;flex-direction:column;gap:18px}
+.meta{display:flex;justify-content:space-between;gap:10px;font-family:var(--mono);font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.q{font-family:var(--display);font-weight:500;font-size:clamp(1.25rem,3.6vw,1.6rem);line-height:1.25;margin:0;text-wrap:balance}
+.flip{cursor:pointer;min-height:260px;justify-content:space-between;user-select:none}
+.flip:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.answer{border-top:1px dashed var(--line);padding-top:16px;font-size:1.15rem;font-weight:500}
+.answer .lbl{display:block;font-family:var(--mono);font-size:.72rem;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;font-weight:400;margin-bottom:4px}
+.hint{font-size:.82rem;color:var(--muted);text-align:center}
+kbd{font-family:var(--mono);font-size:.75rem;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;background:var(--sunk)}
+
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.btn{flex:1;min-width:140px;border:1px solid var(--line);background:var(--surface);color:var(--fg);font:600 .95rem var(--body);padding:12px 16px;border-radius:10px;cursor:pointer}
+.btn:hover{border-color:var(--fg)}
+.btn.bad{background:var(--warn-soft);border-color:var(--warn);color:var(--fg)}
+.btn.good{background:var(--good-soft);border-color:var(--good);color:var(--fg)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn:disabled{opacity:.45;cursor:default}
+
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{text-align:left;border:1px solid var(--line);background:var(--bg);color:var(--fg);font:400 1rem var(--body);padding:12px 14px;border-radius:10px;cursor:pointer;display:flex;gap:12px;align-items:baseline}
+.opt .k{font-family:var(--mono);font-size:.78rem;color:var(--muted);flex:none}
+.opt:hover:not(:disabled){border-color:var(--fg)}
+.opt.right{background:var(--good-soft);border-color:var(--good)}
+.opt.wrong{background:var(--warn-soft);border-color:var(--warn)}
+.opt:disabled{cursor:default}
+
+.inp{width:100%;font:400 1.05rem var(--body);padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg)}
+.verdict{font-weight:600;font-size:.95rem}
+.verdict.ok{color:var(--good)} .verdict.no{color:var(--warn)}
+.yours{font-size:.9rem;color:var(--muted)}
+
+.done{text-align:center;align-items:center}
+.big{font-family:var(--display);font-size:3.2rem;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+
+.search{width:100%;font:400 .95rem var(--body);padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--fg)}
+.list{display:flex;flex-direction:column;gap:0;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.list h3{margin:0;padding:14px 16px 6px;font-family:var(--mono);font-size:.72rem;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);background:var(--surface)}
+.item{display:grid;grid-template-columns:10px 1fr;gap:12px;padding:10px 16px;border-top:1px solid var(--sunk)}
+.item .s{width:8px;height:8px;border-radius:2px;margin-top:8px;background:var(--line)}
+.item .s.learn{background:var(--warn)} .item .s.known{background:var(--good)}
+.item p{margin:0;min-width:0}
+.item .iq{color:var(--muted);font-size:.9rem}
+.item .ia{font-weight:500}
+.reset{align-self:flex-start;background:none;border:0;color:var(--muted);font:400 .82rem var(--body);text-decoration:underline;cursor:pointer;padding:0}
+.confirm{font-size:.85rem;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Lihased <em>· musculi</em></h1>
+      <p class="sub">60 kordamiskaarti: ehitus, ladina nimetused, funktsioonid ja füsioloogia</p>
+    </div>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <div class="strip" id="strip" aria-hidden="true"></div>
+  <div class="legend"><span><i class="dot" style="background:var(--line)"></i>uus</span><span><i class="dot" style="background:var(--warn)"></i>harjutamisel</span><span><i class="dot" style="background:var(--good)"></i>selge</span></div>
+
+  <div class="tabs" role="tablist" id="tabs">
+    <button role="tab" data-mode="flash" aria-selected="true">Kaardid</button>
+    <button role="tab" data-mode="quiz" aria-selected="false">Valikvastused</button>
+    <button role="tab" data-mode="type" aria-selected="false">Kirjuta vastus</button>
+    <button role="tab" data-mode="list" aria-selected="false">Kõik kaardid</button>
+  </div>
+
+  <div class="filters" id="filters"></div>
+
+  <main class="stage" id="stage"></main>
+
+  <div id="resetBox"><button class="reset" id="resetBtn">Lähtesta edenemine</button></div>
+</div>
+
+<script>
+const CATS = {eh:"Ehitus ja terminid", kude:"Lihaskoe tüübid", kuju:"Kuju ja liigesed", nimi:"Ladina nimetuste tähendus", fn:"Funktsioonid", fys:"Füsioloogia"};
+const RAW = [
+["eh","Mis on lihase ladinakeelne nimetus?","Musculus"],
+["eh","Mis on kõõluse ladinakeelne nimetus?","Tendo"],
+["eh","Kuidas nimetatakse kogu lihast ümbritsevat sidekoelist kesta?","Epimüüsium (epimysium)"],
+["eh","Kuidas nimetatakse lihaskiudude kimpe ümbritsevat sidekoelist kesta?","Perimüüsium (perimysium)"],
+["eh","Kuidas nimetatakse iga individuaalset lihaskiudu ümbritsevat sidekoelist kesta?","Endomüüsium (endomysium)"],
+["eh","Kuidas nimetatakse laiade lihaste õhukest ja lamedat kilejat kõõlust?","Aponeuroos ehk kilekõõlus (aponeurosis)"],
+["eh","Kuidas nimetatakse teadusharu, mis uurib lihaseid?","Müoloogia"],
+["kude","Mitu skeletilihast on ligikaudu inimese kehas?","Umbes 400 kuni 600 skeletilihast."],
+["kude","Mis on skeletilihaste ehk vöötlihaste peamine juhtimisomadus?","Skeletilihased alluvad inimese tahtele."],
+["kude","Kuidas nimetatakse südame põhimassi moodustavat lihaskude?","Südamelihas (myocardium)"],
+["kude","Millist tüüpi lihaskude moodustab siseelundite ja veresoonte seinu?","Silelihaskude"],
+["eh","Kuidas nimetatakse lihase paigalpüsivat või väheliikuvat algusosa?","Lihase alguskoht (origo)"],
+["eh","Kuidas nimetatakse lihase liikuvamat vastasotsa kokkutõmbumisel?","Lihase kinnituskoht (insertio)"],
+["eh","Kuidas nimetatakse pika lihase keskset paksenenud osa?","Lihasekõht"],
+["kuju","Mis on kahelise alguspeaga lihase ladinakeelne nimetus?","Musculus biceps"],
+["kuju","Mis on kolmelise alguspeaga lihase ladinakeelne nimetus?","Musculus triceps"],
+["kuju","Mis on neljalise alguspeaga lihase ladinakeelne nimetus?","Musculus quadriceps"],
+["kuju","Mis on kakskõhtlihas?","Lihas, mille lihasekõht on vahekõõluse abil jagatud kaheks osaks."],
+["kuju","Millist lihast nimetatakse ainuliigeseliseks lihaseks?","Lihast, mis kulgeb üle ühe liigese."],
+["kuju","Millist lihast nimetatakse kaheliigeseliseks lihaseks?","Lihast, mis kulgeb üle kahe liigese."],
+["kuju","Millist lihast nimetatakse mitmeliigeseliseks lihaseks?","Lihast, mis kulgeb üle rohkem kui kahe liigese."],
+["kuju","Mis iseloomustab ühelisulgjat lihast?","Lihaskiud kinnituvad kõõlusele põiki ainult ühelt poolt."],
+["kuju","Mis iseloomustab kahelisulgjat lihast?","Lihaskiud kinnituvad kõõlusele mõlemalt poolt teravnurga all."],
+["kuju","Mis on inimese keha pikim lihas?","Rätsepalihas (musculus sartorius)"],
+["nimi","Mida tähistab lihase nimetuses ladinakeelne sõna vastus?","Hiiglaslikku või väga suurt mõõdet."],
+["nimi","Mida tähistab lihase nimetuses ladinakeelne sõna maximus?","Suurimat mõõdet."],
+["nimi","Mida tähistab lihase nimetuses ladinakeelne sõna minimus?","Väikseimat mõõdet."],
+["nimi","Mida tähistab lihase nimetuses ladinakeelne sõna longus?","Pikka mõõdet."],
+["nimi","Mida tähistab lihase nimetuses ladinakeelne sõna brevis?","Lühikest mõõdet."],
+["nimi","Mida tähistab lihase nimetuses ladinakeelne sõna deltoideus?","Kolmnurkset kuju."],
+["nimi","Mida tähistab lihase nimetuses ladinakeelne sõna latissimus?","Laiimat kuju."],
+["nimi","Mida tähistab lihase nimetuses ladinakeelne sõna trapezius?","Trapetsikujulist kuju."],
+["nimi","Mida tähistab lihase nimetuses ladinakeelne sõna rectus?","Otse ehk sirgelt kulgevaid lihaskiude."],
+["nimi","Mida tähistab lihase nimetuses ladinakeelne sõna transversus?","Risti kulgevaid lihaskiude."],
+["nimi","Mida tähistab lihase nimetuses ladinakeelne sõna obliquus?","Diagonaalselt ehk põiki kulgevaid lihaskiude."],
+["nimi","Mida tähistab lihase nimetuses ladinakeelne sõna orbicularis?","Ringikujulist ehk sõõrjat asendit."],
+["nimi","Mida tähistab lihase nimetuses ladinakeelne sõna pectoralis?","Rinna piirkonnas paiknemist."],
+["nimi","Mida tähistab lihase nimetuses ladinakeelne sõna gluteus?","Tuhara piirkonnas paiknemist."],
+["nimi","Mida tähistab lihase nimetuses ladinakeelne sõna brachii?","Õlavarre piirkonnas paiknemist."],
+["nimi","Mida tähistab eesliide supra- lihase nimetuses?","Asukohta teise struktuuri kohal ehk ülal."],
+["nimi","Mida tähistab eesliide infra- lihase nimetuses?","Asukohta teise struktuuri all."],
+["nimi","Mida tähistab eesliide sub- lihase nimetuses?","Asukohta teise struktuuri all või sees."],
+["fn","Millist funktsiooni täidab abductor-lihas?","Eemaldab kehaosa keskjoonest."],
+["fn","Millist funktsiooni täidab adductor-lihas?","Lähendab kehaosa keskjoonele."],
+["fn","Millist funktsiooni täidab flexor-lihas?","Painutab liigest ehk vähendab liigesenurka."],
+["fn","Millist funktsiooni täidab extensor-lihas?","Sirutab liigest ehk suurendab liigesenurka."],
+["fn","Millist funktsiooni täidab levator-lihas?","Tõstab kehaosa või struktuuri ülespoole."],
+["fn","Mis on masseter-lihase peamine funktsioon?","Mälumisliigutuste sooritamine."],
+["fn","Mis on rinnakult ja rangluult algava ning nibujätkele kinnituva lihase ladinakeelne nimetus?","Musculus sternocleidomastoideus"],
+["fys","Milline on punaste ehk aeglaste lihaskiudude peamine energia tootmise viis?","Aeroobne oksüdatsioon ehk hapnikuga energia tootmine."],
+["fys","Milline valk talletab punastes lihaskiududes hapnikku pikaajaliseks kontraktsiooniks?","Müoglobiin"],
+["fys","Milline on valgete ehk kiirete lihaskiudude peamine ATP tootmise viis?","Glükolüüs (anaeroobne rada)"],
+["fys","Mis on valgete lihaskiudude peamine funktsionaalne erinevus võrreldes punastega?","Valged kiud reageerivad kiiresti, kuid väsivad samuti kiiresti."],
+["fys","Mis on sarkomeer (sarcomere)?","Skeletilihase struktuurne ja funktsionaalne ühik."],
+["fys","Millised kaks peamist kontraktiilset valku moodustavad sarkomeeri müofilamendid?","Aktiin ja müosiin."],
+["fys","Millised kaks regulatoorset valku paiknevad aktiinifilamendi juures skeletilihases?","Troponiin ja tropomüosiin."],
+["fys","Mis on isotooniline kontraktsioon?","Kontraktsioon, mille puhul lihase pinge jääb samaks, kuid pikkus muutub."],
+["fys","Mis vahe on kontsentrilisel ja ekstsentrilisel isotoonilisel kontraktsioonil?","Kontsentrilisel kontraktsioonil lihas lüheneb, ekstsentrilisel pikeneb pinge all."],
+["fys","Mis on isomeetriline kontraktsioon?","Kontraktsioon, mille puhul lihase pinge suureneb, kuid pikkus ei muutu."],
+["fys","Mis moodustab ühe motoorse üksuse (motor unit)?","Üks motoneuron koos kõigi tema poolt innerveeritavate lihaskiududega."]
+];
+const CARDS = RAW.map((r,i)=>({id:i,cat:r[0],q:r[1],a:r[2]}));
+
+/* ---------- storage ---------- */
+const KEY="lihased-progress-v1";
+let prog={};
+try{prog=JSON.parse(localStorage.getItem(KEY)||"{}")||{}}catch(e){prog={}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(prog))}catch(e){}}
+function mark(id,ok){prog[id]=ok?"known":"learn";save();}
+
+/* ---------- state ---------- */
+const S={mode:"flash",cats:new Set(Object.keys(CATS)),weak:false,queue:[],idx:0,right:0,wrong:0,flipped:false,answered:false,missed:[],search:""};
+const $=s=>document.querySelector(s);
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function pool(){return CARDS.filter(c=>S.cats.has(c.cat)&&(!S.weak||prog[c.id]!=="known"));}
+function start(cards){S.queue=shuffle(cards||pool());S.idx=0;S.right=0;S.wrong=0;S.missed=[];S.flipped=false;S.answered=false;render();}
+
+/* ---------- chrome ---------- */
+function renderStats(){
+  const k=CARDS.filter(c=>prog[c.id]==="known").length, l=CARDS.filter(c=>prog[c.id]==="learn").length;
+  $("#stats").innerHTML=`<span><b>${k}</b> selge</span><span><b>${l}</b> harjutamisel</span><span><b>${CARDS.length-k-l}</b> uut</span>`;
+  const cur=S.queue[S.idx];
+  $("#strip").innerHTML=CARDS.map(c=>`<span class="${prog[c.id]||""}${cur&&cur.id===c.id&&S.mode!=="list"?" cur":""}"></span>`).join("");
+}
+function renderFilters(){
+  const counts={};CARDS.forEach(c=>counts[c.cat]=(counts[c.cat]||0)+1);
+  const all=S.cats.size===Object.keys(CATS).length;
+  $("#filters").innerHTML=`<button class="chip" data-cat="*" aria-pressed="${all}">Kõik</button>`+
+    Object.entries(CATS).map(([k,v])=>`<button class="chip" data-cat="${k}" aria-pressed="${S.cats.has(k)&&!all}">${v}<small>${counts[k]}</small></button>`).join("")+
+    (S.mode==="list"?"":`<span class="sep"></span><button class="chip weak" data-weak aria-pressed="${S.weak}">Ainult veel selgeks saamata</button>`);
+}
+$("#filters").addEventListener("click",e=>{
+  const b=e.target.closest("button");if(!b)return;
+  if(b.hasAttribute("data-weak")){S.weak=!S.weak;}
+  else{
+    const k=b.dataset.cat, all=S.cats.size===Object.keys(CATS).length;
+    if(k==="*")S.cats=new Set(Object.keys(CATS));
+    else if(all)S.cats=new Set([k]);
+    else{S.cats.has(k)?S.cats.delete(k):S.cats.add(k);if(!S.cats.size)S.cats=new Set(Object.keys(CATS));}
+  }
+  renderFilters();start();
+});
+$("#tabs").addEventListener("click",e=>{
+  const b=e.target.closest("button");if(!b)return;
+  S.mode=b.dataset.mode;
+  document.querySelectorAll("#tabs button").forEach(x=>x.setAttribute("aria-selected",x===b));
+  renderFilters();start(S.mode==="list"?CARDS:null);
+});
+
+/* ---------- render ---------- */
+function render(){
+  renderStats();
+  const st=$("#stage");
+  if(S.mode==="list")return renderList(st);
+  if(!S.queue.length){st.innerHTML=`<div class="card done"><p class="q">Siin pole ühtegi kaarti.</p><p class="sub">Kõik valitud teema kaardid on juba selged. Lülita filter „Ainult veel selgeks saamata” välja või vali teine teema.</p></div>`;return;}
+  if(S.idx>=S.queue.length)return renderDone(st);
+  const c=S.queue[S.idx];
+  const meta=`<div class="meta"><span>${CATS[c.cat]}</span><span>${S.idx+1} / ${S.queue.length}</span></div>`;
+  if(S.mode==="flash")renderFlash(st,c,meta);
+  else if(S.mode==="quiz")renderQuiz(st,c,meta);
+  else renderType(st,c,meta);
+}
+
+function renderFlash(st,c,meta){
+  st.innerHTML=`<div class="card flip" id="fc" tabindex="0" role="button" aria-label="Pööra kaart">
+    ${meta}
+    <p class="q">${esc(c.q)}</p>
+    ${S.flipped?`<div class="answer"><span class="lbl">Vastus</span>${esc(c.a)}</div>`:`<p class="hint">Mõtle vastus läbi ja klõpsa kaardil · <kbd>tühik</kbd></p>`}
+  </div>
+  <div class="row" style="margin-top:12px">
+    <button class="btn bad" id="no" ${S.flipped?"":"disabled"}>Ei teadnud <kbd>1</kbd></button>
+    <button class="btn good" id="yes" ${S.flipped?"":"disabled"}>Teadsin <kbd>2</kbd></button>
+  </div>`;
+  $("#fc").onclick=()=>{S.flipped=!S.flipped;render();};
+  $("#no").onclick=()=>gradeFlash(false);
+  $("#yes").onclick=()=>gradeFlash(true);
+}
+function gradeFlash(ok){
+  const c=S.queue[S.idx];mark(c.id,ok);
+  if(ok)S.right++;else{S.wrong++;if(!S.missed.includes(c))S.missed.push(c);
+    // tule kaardi juurde paari kaardi pärast tagasi
+    const pos=Math.min(S.queue.length,S.idx+4);S.queue.splice(pos,0,c);}
+  S.idx++;S.flipped=false;render();
+}
+
+function distractors(c){
+  const same=shuffle(CARDS.filter(x=>x.cat===c.cat&&x.a!==c.a));
+  const other=shuffle(CARDS.filter(x=>x.cat!==c.cat&&x.a!==c.a));
+  return same.concat(other).slice(0,3).map(x=>x.a);
+}
+function renderQuiz(st,c,meta){
+  if(!c._opts)c._opts=shuffle([c.a,...distractors(c)]);
+  st.innerHTML=`<div class="card">${meta}<p class="q">${esc(c.q)}</p>
+    <div class="opts">${c._opts.map((o,i)=>`<button class="opt" data-i="${i}"><span class="k">${"ABCD"[i]}</span><span>${esc(o)}</span></button>`).join("")}</div>
+    <div id="fb"></div></div>`;
+  st.querySelectorAll(".opt").forEach(b=>b.onclick=()=>pickQuiz(+b.dataset.i));
+}
+function pickQuiz(i){
+  if(S.answered)return;S.answered=true;
+  const c=S.queue[S.idx],ok=c._opts[i]===c.a;mark(c.id,ok);
+  ok?S.right++:(S.wrong++,S.missed.push(c));
+  document.querySelectorAll(".opt").forEach((b,j)=>{b.disabled=true;if(c._opts[j]===c.a)b.classList.add("right");else if(j===i)b.classList.add("wrong");});
+  $("#fb").innerHTML=`<div class="row"><span class="verdict ${ok?"ok":"no"}" style="align-self:center;flex:1">${ok?"Õige!":"Vale. Õige vastus on märgitud roheliselt."}</span><button class="btn primary" id="nx" style="flex:0 0 auto">Järgmine <kbd>Enter</kbd></button></div>`;
+  renderStats();$("#nx").onclick=next;$("#nx").focus();
+}
+function next(){const c=S.queue[S.idx];if(c)delete c._opts;S.idx++;S.answered=false;render();}
+
+/* typing */
+const fold=s=>s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9 ]/g," ").replace(/\b(ehk|ja|musculus|m)\b/g," ").replace(/\s+/g," ").trim();
+function variants(a){
+  const v=[a,a.replace(/\(.*?\)/g,"")];
+  (a.match(/\((.*?)\)/g)||[]).forEach(p=>v.push(p.slice(1,-1)));
+  a.replace(/\(.*?\)/g,"").split(/\behk\b/).forEach(p=>v.push(p));
+  return v.map(fold).filter(Boolean);
+}
+function isMatch(inp,a){
+  const f=fold(inp);if(!f)return false;
+  const vs=variants(a);
+  if(vs.includes(f))return true;
+  // lühikeste vastuste puhul luba üks trükiviga
+  return vs.some(v=>v.length<=24&&lev(v,f)<=Math.max(1,Math.floor(v.length/8)));
+}
+function lev(a,b){const m=[...Array(b.length+1).keys()];for(let i=1;i<=a.length;i++){let p=m[0];m[0]=i;for(let j=1;j<=b.length;j++){const t=m[j];m[j]=Math.min(m[j]+1,m[j-1]+1,p+(a[i-1]===b[j-1]?0:1));p=t;}}return m[b.length];}
+
+function renderType(st,c,meta){
+  st.innerHTML=`<div class="card">${meta}<p class="q">${esc(c.q)}</p>
+    <form id="tf"><input class="inp" id="ans" autocomplete="off" spellcheck="false" placeholder="Kirjuta oma vastus…"></form>
+    <div id="fb"><div class="row"><button class="btn" id="skip">Ei tea</button><button class="btn primary" id="chk">Kontrolli <kbd>Enter</kbd></button></div></div></div>`;
+  const inp=$("#ans");inp.focus();
+  $("#tf").onsubmit=e=>{e.preventDefault();checkType();};
+  $("#chk").onclick=checkType;$("#skip").onclick=()=>{inp.value="";checkType();};
+}
+function checkType(){
+  if(S.answered)return;S.answered=true;
+  const c=S.queue[S.idx],inp=$("#ans"),val=inp.value.trim();inp.disabled=true;
+  const auto=isMatch(val,c.a);
+  const ans=`<div class="answer"><span class="lbl">Õige vastus</span>${esc(c.a)}</div>`;
+  if(auto){
+    mark(c.id,true);S.right++;
+    $("#fb").innerHTML=`${ans}<div class="row" style="margin-top:12px"><span class="verdict ok" style="align-self:center;flex:1">Õige!</span><button class="btn primary" id="nx" style="flex:0 0 auto">Järgmine <kbd>Enter</kbd></button></div>`;
+    renderStats();$("#nx").onclick=next;$("#nx").focus();
+  }else{
+    $("#fb").innerHTML=`${ans}${val?`<p class="yours">Sinu vastus: ${esc(val)}</p><p class="hint" style="text-align:left">Pikemaid vastuseid ei saa automaatselt hinnata. Võrdle ise: kas mõte oli sama?</p>`:""}
+      <div class="row" style="margin-top:12px"><button class="btn bad" id="no">${val?"Vale":"Edasi"} <kbd>1</kbd></button>${val?`<button class="btn good" id="yes">Mul oli õige <kbd>2</kbd></button>`:""}</div>`;
+    const g=ok=>{mark(c.id,ok);ok?S.right++:(S.wrong++,S.missed.push(c));next();};
+    $("#no").onclick=()=>g(false);if(val)$("#yes").onclick=()=>g(true);
+    $("#no").focus();
+  }
+}
+
+function renderDone(st){
+  const tot=S.right+S.wrong,pct=tot?Math.round(S.right/tot*100):0;
+  st.innerHTML=`<div class="card done">
+    <div class="meta" style="width:100%;justify-content:center"><span>Ring läbi</span></div>
+    <div class="big">${pct}%</div>
+    <p class="sub" style="margin:0">${S.right} õiget, ${S.wrong} korda eksisid${S.missed.length?` · ${S.missed.length} kaarti vajab kordamist`:""}</p>
+    <div class="row" style="width:100%">
+      ${S.missed.length?`<button class="btn primary" id="rm">Korda vigaseid (${S.missed.length})</button>`:""}
+      <button class="btn" id="ra">Alusta uuesti</button>
+    </div></div>`;
+  if(S.missed.length)$("#rm").onclick=()=>start(S.missed.slice());
+  $("#ra").onclick=()=>start();
+}
+
+function renderList(st){
+  const q=fold(S.search);
+  const cards=CARDS.filter(c=>S.cats.has(c.cat)&&(!q||fold(c.q+" "+c.a).includes(q)));
+  let html=`<input class="search" id="srch" placeholder="Otsi, nt flexor, sarkomeer, aponeuroos…" value="${esc(S.search)}"><div style="height:12px"></div><div class="list">`;
+  Object.keys(CATS).forEach(k=>{
+    const g=cards.filter(c=>c.cat===k);if(!g.length)return;
+    html+=`<h3>${CATS[k]}</h3>`+g.map(c=>`<div class="item"><span class="s ${prog[c.id]||""}"></span><p><span class="iq">${esc(c.q)}</span><br><span class="ia">${esc(c.a)}</span></p></div>`).join("");
+  });
+  if(!cards.length)html+=`<div class="item"><span></span><p class="iq">Otsingule „${esc(S.search)}” ei leitud ühtegi kaarti.</p></div>`;
+  st.innerHTML=html+"</div>";
+  const s=$("#srch");s.oninput=()=>{S.search=s.value;const p=s.selectionStart;renderList(st);const n=$("#srch");n.focus();n.setSelectionRange(p,p);};
+}
+
+/* keyboard */
+document.addEventListener("keydown",e=>{
+  if(e.target.tagName==="INPUT"&&!S.answered)return;
+  if(S.mode==="flash"&&S.idx<S.queue.length){
+    if(e.key===" "){e.preventDefault();S.flipped=!S.flipped;render();}
+    else if(S.flipped&&e.key==="1")gradeFlash(false);
+    else if(S.flipped&&e.key==="2")gradeFlash(true);
+  }else if(S.mode==="quiz"&&S.idx<S.queue.length){
+    const m={"1":0,"2":1,"3":2,"4":3,a:0,b:1,c:2,d:3}[e.key.toLowerCase()];
+    if(!S.answered&&m!==undefined)pickQuiz(m);
+    else if(S.answered&&e.key==="Enter"&&document.activeElement.id!=="nx"){e.preventDefault();next();}
+  }else if(S.mode==="type"&&S.answered){
+    if(e.key==="1"&&$("#no")){e.preventDefault();$("#no").click();}
+    else if(e.key==="2"&&$("#yes")){e.preventDefault();$("#yes").click();}
+  }
+});
+
+/* reset */
+function askReset(){
+  $("#resetBox").innerHTML=`<div class="confirm"><span>Kas kustutada kogu edenemine sellest brauserist?</span><button class="chip" id="rY">Jah, lähtesta</button><button class="chip" id="rN">Tühista</button></div>`;
+  $("#rY").onclick=()=>{prog={};save();restoreReset();start();};
+  $("#rN").onclick=restoreReset;
+}
+function restoreReset(){$("#resetBox").innerHTML=`<button class="reset" id="resetBtn">Lähtesta edenemine</button>`;$("#resetBtn").onclick=askReset;}
+$("#resetBtn").onclick=askReset;
+
+renderFilters();start();
+</script>
+
+</body></html>
